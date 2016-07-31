@@ -170,35 +170,36 @@ if __name__ == '__main__':
     ensure_directory(HOME)
 
     if arguments.get('install'):
-        version = parse_version(arguments.get('<version>')) # TODO: Allow of the form, 9, 9.0, 9.0-20160731
         package = None
-        if arguments.get('--today'):
-            if version.get('patch') is not None:
-              raise Exception('You must not specify a patch release with the --today option')
-            today = datetime.date.today()
-            nightly = today.strftime('%Y%m%d')
-            package = download_file(
-                get_download_itr(
-                    version.get('major'), 
-                    version.get('minor'), 
-                    nightly, 
-                    is_nightly=True
-                ), 
-                local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg', 
-                onProgress=show_progress
-            )
-        elif arguments.get('--local'):
-            debug.error('local')
+        if arguments.get('--local'):
+            package = arguments.get('<package>')
         else:
-            logger.debug(version)
-            package = download_file(
-                get_download_itr(
-                    version.get('major'),
-                    version.get('minor'),
-                    version.get('patch')
-                ),
-                local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg',
-                onProgress=show_progress
-            )
+            version = parse_version(arguments.get('<version>'))
+            if arguments.get('--today'):
+                if version.get('patch') is not None:
+                  raise Exception('You must not specify a patch release with the --today option')
+                today = datetime.date.today()
+                nightly = today.strftime('%Y%m%d')
+                package = download_file(
+                    get_download_itr(
+                        version.get('major'), 
+                        version.get('minor'), 
+                        nightly, 
+                        is_nightly=True
+                    ), 
+                    local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg', 
+                    onProgress=show_progress
+                )
+            else:
+                logger.debug(version)
+                package = download_file(
+                    get_download_itr(
+                        version.get('major'),
+                        version.get('minor'),
+                        version.get('patch')
+                    ),
+                    local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg',
+                    onProgress=show_progress
+                )
 
         install_package(package)            
