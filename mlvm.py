@@ -6,7 +6,7 @@
 Usage:
   mlvm list
   mlvm use <version> [--verbose]
-  mlvm install <version> [--alias <name>] [--nightly] [--upgrade] [--verbose]
+  mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose]
   mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose]
   mlvm remove [<version> | --all] [--verbose]
   mlvm rename <version> <name> [--verbose]
@@ -20,7 +20,8 @@ Options:
   -h --help     This screen
   --version     The version
   -a --alias    A preferred name for the version
-  -n --nightly  Get a nightly instead of a GA release (requires credentials)
+  --today       Today’s nightly (requires credentials)
+  --yesterday   Yesterday’s nightly (requires credentials)
   -l --local    Install a package from a local file
   -u --upgrade  Upgrade an existing installation
   -a --all      Remove all versions
@@ -52,8 +53,8 @@ log.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
 logger.addHandler(log)
 
 
-def download_file(url, onProgress=None, auth=None):
-    local_filename = 'MarkLogic.dmg' #url.split('/')[-1]
+def download_file(url, local_filename = 'MarkLogic.dmg', onProgress=None, auth=None):
+    #local_filename = url.split('/')[-1]
     # NOTE the stream=True parameter
     r = requests.get(url, stream=True, auth=auth)
     logger.debug(r.headers) # TODO: Handle errors
@@ -72,6 +73,9 @@ def download_file(url, onProgress=None, auth=None):
 
 def show_progress(amt, total):
     logger.debug(str(amt) + ' of ' + str(total))
+
+def install_package(package_path):
+    logger.debug(package_path)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='2.0.0')
@@ -99,7 +103,7 @@ if __name__ == '__main__':
 #  'start': False,
 #  'stop': False,
 #  'use': False}
-    HOME = os.getenv('MLVM_HOME', '~/.mlvm')
+    HOME = os.getenv('MLVM_HOME', '~/.mlvm/versions')
     logger.debug('HOME ' + HOME)
     SYSTEM = platform.system() # 'Darwin'
     logger.debug('SYSTEM ' + SYSTEM)
@@ -107,30 +111,23 @@ if __name__ == '__main__':
     if not os.path.isdir(HOME):
         logger.warn('Creating ' + HOME + ' becuase it does not yet exist')
         os.makedirs(HOME)
+        # TODO: Ensure .mlvm/versions exists
 
     if arguments.get('install'):
         url = 'https://developer.marklogic.com/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg?t=GUp8vqR53O5ItrB.KCXEu0&email=jmakeig%40marklogic.com'
-        if arguments.get('--nightly'):
+        version = None
+        package = None
+        if arguments.get('--today'):
+            version = arguments.get('<version>') # TODO: Allow of the form, 9, 9.0, 9.0-20160731
             today = datetime.date.today()
-            nightly = today.strftime('')
-            url = 'https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-90-build.marklogic.com/HEAD/pkgs.20160731/MarkLogic-9.0-20160731-x86_64.dmg'
+            nightly = today.strftime('%Y%m%d')
+            # TODO: Branch for platform
+            url = 'https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-' + '90' + '-build.marklogic.com/HEAD/pkgs.' + nightly + '/MarkLogic-' + version + '-' + nightly + '-x86_64.dmg'
             user = raw_input('Username for root.marklogic.com: ') # TODO: Validation
             password = getpass.getpass('Password for ' + user + ' on root.marklogic.com: ')
-            package = download_file(url, auth=HTTPDigestAuth(user, password), onProgress=show_progress)
-            logger.debug(package)
+            # TODO: Download package to $HOME/downloads
+            package = download_file(url, local_filename='MarkLogic.dmg', auth=HTTPDigestAuth(user, password), onProgress=show_progress)
         elif arguments.get('--local'):
-            version = arguments.get('<version>')
-            
-            #logger.debug(download_file(url))
-        
+            debug.error('local')
 
-#             if [ -z "$3" ]
-#             then
-#                 NIGHTLY=`date "+%Y%m%d"`
-#             else
-#                 NIGHTLY="$3"
-#             fi
-# 
-#             VER="$2"-"$NIGHTLY"
-#             URL=https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-$(echo $2 | sed s/\\.//)-build.marklogic.com/HEAD/pkgs."$NIGHTLY"/MarkLogic-"$VER"-x86_64.dmg
-
+        install_package(package)            
