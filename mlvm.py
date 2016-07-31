@@ -53,17 +53,53 @@ log.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
 logger.addHandler(log)
 
 
-def download_file(url, local_filename = 'MarkLogic.dmg', onProgress=None, auth=None):
-    #local_filename = url.split('/')[-1]
-    # NOTE the stream=True parameter
-    r = requests.get(url, stream=True, auth=auth)
-    logger.debug(r.headers) # TODO: Handle errors
-    #logger.info(r.headers.get('Content-Length'))
-    total_size = int(r.headers.get('Content-Length'))
-    chunk_size=1024
+def get_release_artifact(major, minor, patch, system=platform.system()):
+    if 'Darwin' == system:
+      return 'MarkLogic-' + major + '.' + minor + '-' + patch + '-x86_64.dmg'
+    raise Exception('Not yet implemented')
+
+def promptCredentials(realm):
+    """ Callback to prompt for username and password """
+    user = raw_input('Username for ' + realm + ': ') # TODO: Validation
+    password = getpass.getpass('Password for ' + user + ' on ' + realm + ': ')
+    return {'user': user, 'password': password}
+
+def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredentials):
+    major = str(int(major)) # 8
+    minor = str(int(minor)) # 0
+    patch = str(patch) # 5.5 or 20160731
+        
+    if is_nightly:
+      # https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-80-build.marklogic.com/b8_0/pkgs.20160731/MarkLogic-8.0-20160731-x86_64.dmg
+      ROOT_URL = 'https://root.marklogic.com'
+      # TODO: Platform-specific
+      auth = onAuth(ROOT_URL)
+      url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch)
+      logger.debug(url)
+      return requests.get(url, auth=HTTPDigestAuth(auth.get('user'), auth.get('password')), stream=True).iter_content
+    else:
+      DMC_URL = 'https://developer.marklogic.com'
+      auth = onAuth(DMC_URL)
+      session = requests.Session()
+      response = session.post(DMC_URL + '/login', data={'email': auth.get('user'), 'password': auth.get('password')})
+      # TODO: Handle non-200 response
+      # > 200 OK
+      # > {"status":"ok","name":"Justin Makeig"}
+      response = session.post(DMC_URL + '/get-download-url', data={'download': '/download/binaries/' + major + '.' + minor + '/' + get_release_artifact(major, minor, patch)}) # '/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg'
+      # TODO: Handle non-200 response
+      # > 200 OK
+      # > {"status":"ok","path":"/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg?t=*************/&email=whoami%40example.com"}
+      path = response.json().get('path')
+      logger.debug(DMC_URL + path)
+      return session.get(DMC_URL + path, stream=True).iter_content
+
+
+def download_file(itr, local_filename = 'MarkLogic.dmg', total_size=None, onProgress=None):
+    """ Given a response iterator, write chunks to a file. """
+    chunk_size=1024 * 5
     running = 0
     with open(local_filename, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=chunk_size): 
+        for chunk in itr(chunk_size=chunk_size): 
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
                 running += chunk_size
@@ -71,11 +107,34 @@ def download_file(url, local_filename = 'MarkLogic.dmg', onProgress=None, auth=N
                     onProgress(running, total_size)
     return local_filename
 
-def show_progress(amt, total):
+def show_progress(amt, total, stream=None):
     logger.debug(str(amt) + ' of ' + str(total))
 
 def install_package(package_path):
     logger.debug(package_path)
+
+def parse_version(version):
+    """ Parses a string, such as `'9.0-20160731'` or `'8.0-5.5'` into a 
+        dictionary with keys, `major`, `minor`, and `patch`. """
+    version = str(version)
+    mm_patch = version.split('-')
+    mm = mm_patch[0]
+    patch = None
+    if len(mm_patch) > 1:
+        patch = mm_patch[1]
+    mm_tokens = mm.split('.')
+    major = int(mm_tokens[0])
+    minor = None
+    if len(mm_tokens) > 1:
+        minor = int(mm_tokens[1])
+    return {'major': major, 'minor': minor, 'patch': patch}
+
+def ensure_directory(path):
+    """ If a directory doesn’t exist at the path create it. """    
+    if not os.path.isdir(path):
+      logger.warn('Creating ' + path + ' becuase it does not yet exist')
+      os.makedirs(path)
+    return path
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='2.0.0')
@@ -103,31 +162,43 @@ if __name__ == '__main__':
 #  'start': False,
 #  'stop': False,
 #  'use': False}
-    HOME = os.getenv('MLVM_HOME', '~/.mlvm/versions')
+    HOME = os.getenv('MLVM_HOME', '~/.mlvm')
     logger.debug('HOME ' + HOME)
     SYSTEM = platform.system() # 'Darwin'
     logger.debug('SYSTEM ' + SYSTEM)
     
-    if not os.path.isdir(HOME):
-        logger.warn('Creating ' + HOME + ' becuase it does not yet exist')
-        os.makedirs(HOME)
-        # TODO: Ensure .mlvm/versions exists
+    ensure_directory(HOME)
 
     if arguments.get('install'):
-        url = 'https://developer.marklogic.com/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg?t=GUp8vqR53O5ItrB.KCXEu0&email=jmakeig%40marklogic.com'
-        version = None
+        version = parse_version(arguments.get('<version>')) # TODO: Allow of the form, 9, 9.0, 9.0-20160731
         package = None
         if arguments.get('--today'):
-            version = arguments.get('<version>') # TODO: Allow of the form, 9, 9.0, 9.0-20160731
+            if version.get('patch') is not None:
+              raise Exception('You must not specify a patch release with the --today option')
             today = datetime.date.today()
             nightly = today.strftime('%Y%m%d')
-            # TODO: Branch for platform
-            url = 'https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-' + '90' + '-build.marklogic.com/HEAD/pkgs.' + nightly + '/MarkLogic-' + version + '-' + nightly + '-x86_64.dmg'
-            user = raw_input('Username for root.marklogic.com: ') # TODO: Validation
-            password = getpass.getpass('Password for ' + user + ' on root.marklogic.com: ')
-            # TODO: Download package to $HOME/downloads
-            package = download_file(url, local_filename='MarkLogic.dmg', auth=HTTPDigestAuth(user, password), onProgress=show_progress)
+            package = download_file(
+                get_download_itr(
+                    version.get('major'), 
+                    version.get('minor'), 
+                    nightly, 
+                    is_nightly=True
+                ), 
+                local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg', 
+                onProgress=show_progress
+            )
         elif arguments.get('--local'):
             debug.error('local')
+        else:
+            logger.debug(version)
+            package = download_file(
+                get_download_itr(
+                    version.get('major'),
+                    version.get('minor'),
+                    version.get('patch')
+                ),
+                local_filename = ensure_directory(HOME + '/downloads') + '/MarkLogic.dmg',
+                onProgress=show_progress
+            )
 
         install_package(package)            
