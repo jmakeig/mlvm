@@ -132,18 +132,15 @@ def install_package(path, artifact, alias=None, system=platform.system()):
     if not os.path.isfile(path):
         raise Exception(path + ' does not exist')
     if 'Darwin' == system:
-        #mount_point = tempfile.gettempdir() + '/' + str(uuid.uuid4())
-        #mount_point = ensure_directory(HOME + '/temp') + '/' + str(uuid.uuid4())
-        #logger.debug(mount_point)
-        #subprocess.call(["hdiutil", "attach", path, "-mountpoint", mount_point, "-verbose"]) #, "-nobrowse", "-quiet"])
         try:
             from gmacpyutil import macdisk
             img = macdisk.Image(path)
             disk = img.Attach()
         
             from gmacpyutil import RunProcess
+            # pax.gz doesn’t seem to be properly supported by Python’s tar library
             cmd = ['tar', 'xfz', '/Volumes/MarkLogic/' + artifact + '.pkg/Contents/Archive.pax.gz', 
-                '-C', ensure_directory(HOME + '/versions/' + alias)]
+                '-C', ensure_directory(HOME + '/versions/' + alias)] 
             result = RunProcess(cmd)
             logger.debug(result)
             if 0 != result[2]:
