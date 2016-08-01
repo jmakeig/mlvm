@@ -4,20 +4,21 @@
 """MarkLogic Version Manager
 
 Usage:
-  mlvm list [--remote]
-  mlvm use <version> [--verbose]
-  mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose]
-  mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose]
-  mlvm remove [<version> | --all] [--verbose]
-  mlvm rename <version> <name> [--verbose]
-  mlvm init [<host>] [--verbose]
-  mlvm start
-  mlvm stop
+  mlvm list [--remote] [--verbose | --debug]
+  mlvm use <version> [--verbose | --debug]
+  mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
+  mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose | --debug]
+  mlvm remove [<version> | --all] [--verbose | --debug]
+  mlvm rename <version> <name> [--alias] [--verbose | --debug]
+  mlvm init [<host>] [--verbose | --debug]
+  mlvm start [--verbose | --debug]
+  mlvm stop [--verbose | --debug]
   mlvm eval <input> [--sjs | --xqy]
   mlvm ps
   
 Options:
   -h --help     This screen
+  --remote      Include remote versions as well
   --version     The version
   -a --alias    A preferred name for the version
   --today       Today’s nightly (requires credentials)
@@ -28,6 +29,7 @@ Options:
   --sjs         Evaluate Server-Side JavaScript
   --xqy         Evaluate XQuery
   -v --verbose  More detailed information
+  --debug       Developer debugging information
   
 Some other text:
   Here is some more text
@@ -81,28 +83,31 @@ def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredent
     #patch = str(patch) # 5.5 or 20160731
         
     if is_nightly:
-      # https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-80-build.marklogic.com/b8_0/pkgs.20160731/MarkLogic-8.0-20160731-x86_64.dmg
-      ROOT_URL = 'https://root.marklogic.com'
-      # TODO: Platform-specific
-      auth = onAuth(ROOT_URL)
-      url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch)
-      logger.debug(url)
-      return requests.get(url, auth=HTTPDigestAuth(auth.get('user'), auth.get('password')), stream=True).iter_content
+        # https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-80-build.marklogic.com/b8_0/pkgs.20160731/MarkLogic-8.0-20160731-x86_64.dmg
+        ROOT_URL = 'https://root.marklogic.com'
+        # TODO: Platform-specific
+        auth = onAuth(ROOT_URL)
+        url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch)
+        logger.debug(url)
+        return requests.get(url, auth=HTTPDigestAuth(auth.get('user'), auth.get('password')), stream=True).iter_content
     else:
-      DMC_URL = 'https://developer.marklogic.com'
-      auth = onAuth(DMC_URL)
-      session = requests.Session()
-      response = session.post(DMC_URL + '/login', data={'email': auth.get('user'), 'password': auth.get('password')})
-      # TODO: Handle non-200 response
-      # > 200 OK
-      # > {"status":"ok","name":"Justin Makeig"}
-      response = session.post(DMC_URL + '/get-download-url', data={'download': '/download/binaries/' + major + '.' + minor + '/' + get_release_artifact(major, minor, patch)}) # '/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg'
-      # TODO: Handle non-200 response
-      # > 200 OK
-      # > {"status":"ok","path":"/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg?t=*************/&email=whoami%40example.com"}
-      path = response.json().get('path')
-      logger.debug(DMC_URL + path)
-      return session.get(DMC_URL + path, stream=True).iter_content
+        DMC_URL = 'https://developer.marklogic.com'
+        auth = onAuth(DMC_URL)
+        session = requests.Session()
+        response = session.post(DMC_URL + '/login', data={'email': auth.get('user'), 'password': auth.get('password')})
+        # TODO: Handle non-200 response
+        # > 200 OK
+        # > {"status":"ok","name":"Justin Makeig"}
+        response = session.post(DMC_URL + '/get-download-url', data={'download': '/download/binaries/' + major + '.' + minor + '/' + get_release_artifact(major, minor, patch) + '.dmg'}) # FIXME: Platform-specific
+        # TODO: Handle non-200 response
+        # > 200 OK
+        # > {"status":"ok","path":"/download/binaries/8.0/MarkLogic-8.0-5.5-x86_64.dmg?t=*************/&email=whoami%40example.com"}
+        logger.debug(response.status_code)
+        if 200 != response.status_code:
+            raise Exception(response.text) # TODO: Better exceptions?
+        path = response.json().get('path')
+        logger.debug(DMC_URL + path)
+        return session.get(DMC_URL + path, stream=True).iter_content
 
 def download_file(itr, local_filename, total_size=None, onProgress=None):
     """ Given a response iterator, write chunks to a file. """
@@ -121,7 +126,7 @@ def show_progress(amt, total, stream=None):
     logger.debug(str(amt) + ' of ' + str(total))
 
 def install_package(path, artifact, alias=None, system=platform.system()):
-    #logger.debug(path)
+    logger.info('Installing ' + alias + ' from ' + path + ' with artifact ' + artifact)
     if alias is None:
         alias = artifact
     if not os.path.isfile(path):
@@ -131,20 +136,23 @@ def install_package(path, artifact, alias=None, system=platform.system()):
         #mount_point = ensure_directory(HOME + '/temp') + '/' + str(uuid.uuid4())
         #logger.debug(mount_point)
         #subprocess.call(["hdiutil", "attach", path, "-mountpoint", mount_point, "-verbose"]) #, "-nobrowse", "-quiet"])
-        from gmacpyutil import macdisk
-        img = macdisk.Image(path)
-        disks = img.Attach()
+        try:
+            from gmacpyutil import macdisk
+            img = macdisk.Image(path)
+            disk = img.Attach()
         
-        from gmacpyutil import RunProcess
-        cmd = ['tar', 'xfz', '/Volumes/MarkLogic/' + artifact + '.pkg/Contents/Archive.pax.gz', 
-            '-C', ensure_directory(HOME + '/versions/' + alias)]
-        result = RunProcess(cmd)
-        logger.debug(result)
-        #if 0 != result[2]
-        #    raise Exception(result[1])
-        
-        ensure_directory(HOME + '/versions/' + alias + '/Support/Data')
-        os.chmod(HOME + '/versions/' + alias + '/StartupItems/MarkLogic/MarkLogic', 0775) # TODO: +x, not hard-coded
+            from gmacpyutil import RunProcess
+            cmd = ['tar', 'xfz', '/Volumes/MarkLogic/' + artifact + '.pkg/Contents/Archive.pax.gz', 
+                '-C', ensure_directory(HOME + '/versions/' + alias)]
+            result = RunProcess(cmd)
+            logger.debug(result)
+            if 0 != result[2]:
+                raise Exception(result[1])
+            ensure_directory(HOME + '/versions/' + alias + '/Support/Data')
+            os.chmod(HOME + '/versions/' + alias + '/StartupItems/MarkLogic/MarkLogic', 0775) # TODO: +x, not hard-coded
+        finally:
+            logger.debug('Detaching disk image')
+            img.Detach(force=True)
     else:
         raise Exception('Support for ' + system + ' is not yet implemented')
       
@@ -152,8 +160,23 @@ def install_package(path, artifact, alias=None, system=platform.system()):
 def parse_version(version):
     """ Parses a string, such as `'9.0-20160731'` or `'8.0-5.5'` into a 
         dictionary with keys, `major`, `minor`, and `patch`. """
+        
+    # MarkLogic-RHEL6-9.0-20160801.x86_64.rpm
+    # MarkLogic-RHEL7-9.0-20160801.x86_64.rpm
+    # MarkLogic-9.0-20160801-x86_64.dmg
+    # MarkLogic-9.0-20160801-amd64.msi
+    # 
+    # MarkLogic-RHEL6-7.0-6.4.x86_64.rpm
+    # MarkLogic-RHEL7-7.0-6.4.x86_64.rpm
+    # MarkLogic-7.0-6.4-x86_64.dmg
+    # MarkLogic-7.0-6.4-amd64.msi
+    
     version = str(version)
-    mm_patch = version.split('-')
+    pattern = '(?:MarkLogic-(?:RHEL\d-)?)?(\d{1,2}\.\d-(?:(?:\d{8})|(?:\d{1,2}\.\d{1,2})))(?:[\.\-](?:x86_|amd)64)?'
+    match = re.findall(pattern, version)
+    if 1 != len(match):
+        raise Exception(version + ' doesn’t match a MarkLogic artifact')
+    mm_patch = match[0].split('-')
     mm = mm_patch[0]
     patch = None
     if len(mm_patch) > 1:
@@ -165,39 +188,51 @@ def parse_version(version):
         minor = int(mm_tokens[1])
     return {'major': str(major), 'minor': str(minor), 'patch': patch}
 
+def serialize_version(version):
+    major = version.get('major')
+    minor = version.get('minor')
+    patch = version.get('patch')
+    
+    result = major
+    if minor is not None:
+        result = result + '.' + minor
+    if patch is not None:
+        result = result + '-' + patch
+    return result
+
 def ensure_directory(path):
     """ If a directory doesn’t exist at the path create it. """    
     if not os.path.isdir(path):
-      logger.warn('Creating ' + path + ' becuase it does not yet exist')
+      logger.debug('Creating ' + path + ' becuase it does not yet exist')
       os.makedirs(path)
     return path
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='2.0.0')
-    # logger.debug(arguments)
-# {'--alias': False,
-#  '--all': False,
-#  '--local': False,
-#  '--nightly': False,
-#  '--sjs': False,
-#  '--upgrade': False,
-#  '--verbose': False,
-#  '--xqy': False,
-#  '<host>': None,
-#  '<input>': None,
-#  '<name>': None,
-#  '<package>': None,
-#  '<version>': '9.0',
-#  'eval': False,
-#  'init': False,
-#  'install': True,
-#  'list': False,
-#  'ps': False,
-#  'remove': False,
-#  'rename': False,
-#  'start': False,
-#  'stop': False,
-#  'use': False}
+    #logger.debug(arguments)
+    # {'--alias': False,
+    #  '--all': False,
+    #  '--local': False,
+    #  '--nightly': False,
+    #  '--sjs': False,
+    #  '--upgrade': False,
+    #  '--verbose': False,
+    #  '--xqy': False,
+    #  '<host>': None,
+    #  '<input>': None,
+    #  '<name>': None,
+    #  '<package>': None,
+    #  '<version>': '9.0',
+    #  'eval': False,
+    #  'init': False,
+    #  'install': True,
+    #  'list': False,
+    #  'ps': False,
+    #  'remove': False,
+    #  'rename': False,
+    #  'start': False,
+    #  'stop': False,
+    #  'use': False}
     HOME = os.getenv('MLVM_HOME', '~/.mlvm')
     logger.debug('HOME ' + HOME)
     SYSTEM = platform.system() # 'Darwin'
@@ -206,14 +241,13 @@ if __name__ == '__main__':
     ensure_directory(HOME)
 
     if arguments.get('install'):
-        package = None
+        package = arguments.get('<package>')
         artifact = None
         alias = arguments.get('<name>')
         if arguments.get('--local'):
-            package = arguments.get('<package>')
             artifact = parse_artifact_from_file(package)
             if alias is None:
-                alias = '9.0-20160731' # FIXME: Need to parse version out of artifact
+                alias = serialize_version(parse_version(artifact))
         else:
             version = parse_version(arguments.get('<version>'))
             if arguments.get('--today'):
