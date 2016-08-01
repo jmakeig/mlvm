@@ -4,7 +4,7 @@
 """MarkLogic Version Manager
 
 Usage:
-  mlvm list
+  mlvm list [--remote]
   mlvm use <version> [--verbose]
   mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose]
   mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose]
@@ -247,3 +247,14 @@ if __name__ == '__main__':
                 )
 
         install_package(package, artifact, alias=alias)            
+    elif arguments.get('use'):
+        raise Exception('use isn’t implemented yet')
+        #         rm ~/Library/MarkLogic ~/Library/Application\ Support/MarkLogic ~/Library/PreferencePanes/MarkLogic.prefPane
+        #         rm $SOURCE/versions/.current/MarkLogic $SOURCE/versions/.current/MarkLogic/StartupParameters.plist
+        #         vdir=$(versiondir $1)
+        #         ln -s $vdir/MarkLogic ~/Library/MarkLogic
+        #         ln -s $vdir/Support ~/Library/Application\ Support/MarkLogic
+        #         ln -s $vdir/PreferencePanes/MarkLogic.prefPane ~/Library/PreferencePanes/MarkLogic.prefPane
+        #         # current version links for startup commands
+        #         ln -s $vdir/StartupItems/MarkLogic/MarkLogic $SOURCE/versions/.current/MarkLogic
+        #         ln -s $vdir/StartupItems/MarkLogic/StartupParameters.plist $SOURCE/versions/.current/StartupParameters.plist    
