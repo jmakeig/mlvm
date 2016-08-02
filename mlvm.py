@@ -13,23 +13,24 @@ Usage:
   mlvm init [<host>] [--verbose | --debug]
   mlvm start [--verbose | --debug]
   mlvm stop [--verbose | --debug]
-  mlvm eval <input> [--sjs | --xqy]
+  mlvm eval <input> [--sjs | --xqy] [--database <database>]
   mlvm ps
   
 Options:
-  -h --help     This screen
-  --remote      Include remote versions as well
-  --version     The version
-  -a --alias    A preferred name for the version
-  --today       Today’s nightly (requires credentials)
-  --yesterday   Yesterday’s nightly (requires credentials)
-  -l --local    Install a package from a local file
-  -u --upgrade  Upgrade an existing installation
-  -a --all      Remove all versions
-  --sjs         Evaluate Server-Side JavaScript
-  --xqy         Evaluate XQuery
-  -v --verbose  More detailed information
-  --debug       Developer debugging information
+  -h --help       This screen
+  --remote        Include remote versions as well
+  --version       The version
+  -a --alias      A preferred name for the version
+  --today         Today’s nightly (requires credentials)
+  --yesterday     Yesterday’s nightly (requires credentials)
+  -l --local      Install a package from a local file
+  -u --upgrade    Upgrade an existing installation
+  -a --all        Remove all versions
+  --sjs           Evaluate Server-Side JavaScript
+  --xqy           Evaluate XQuery
+  -d --database   The database to evaluate against [default: Documents]
+  -v --verbose    More detailed information
+  --debug         Developer debugging information
   
 Some other text:
   Here is some more text
