@@ -231,7 +231,9 @@ if __name__ == '__main__':
     #  'start': False,
     #  'stop': False,
     #  'use': False}
-    HOME = os.getenv('MLVM_HOME', '~/.mlvm')
+    HOME = os.getenv('MLVM_HOME', os.getenv('HOME') + '/.mlvm')
+    if HOME.startswith('~'):
+        raise Exception(HOME + ': Python doesn’t to shell expansion of paths.')
     logger.debug('HOME ' + HOME)
     SYSTEM = platform.system() # 'Darwin'
     logger.debug('SYSTEM ' + SYSTEM)
