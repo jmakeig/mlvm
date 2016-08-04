@@ -1,8 +1,6 @@
-env/
+env
 mlvm.egg-info
+.idea
+node_modules
 *.pyc
 *.pyo
-
-versions/
-
-.idea

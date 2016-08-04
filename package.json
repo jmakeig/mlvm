@@ -1,0 +1,26 @@
+{
+  "name": "mlvm",
+  "version": "2.0.0",
+  "description": "MarkLogic Version Manager",
+  "main": "bin/mlvm",
+  "scripts": {
+    "test": "python mlvm/test/runner.py | tap-notify | tap-diff"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmakeig/mlvm.git"
+  },
+  "keywords": [
+    "marklogic"
+  ],
+  "author": "Justin Makeig <jmpublic+github@makeig.com> (https://www.github.com/jmakeig)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/jmakeig/mlvm/issues"
+  },
+  "homepage": "https://github.com/jmakeig/mlvm#readme",
+  "devDependencies": {
+    "tap-diff": "^0.1.1",
+    "tap-notify": "^1.0.0"
+  }
+}
