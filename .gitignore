@@ -1,4 +1,8 @@
-versions/
-tmp/
-.mounts/
 env/
+mlvm.egg-info
+*.pyc
+*.pyo
+
+versions/
+
+.idea

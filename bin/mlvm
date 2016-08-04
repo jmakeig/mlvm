@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+# coding=utf-8
+
+"""MarkLogic Version Manager
+
+Usage:
+  mlvm list [--remote] [--verbose | --debug]
+  mlvm use <version> [--verbose | --debug]
+  mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
+  mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose | --debug]
+  mlvm remove [<version> | --all] [--verbose | --debug]
+  mlvm rename <version> <name> [--alias] [--verbose | --debug]
+  mlvm init [<host>] [--verbose | --debug]
+  mlvm start [--verbose | --debug]
+  mlvm stop [--verbose | --debug]
+  mlvm eval <input> [--sjs | --xqy] [--database <database>]
+  mlvm ps
+  
+Options:
+  -h --help       This screen
+  --remote        Include remote versions as well
+  --version       The version
+  -a --alias      A preferred name for the version
+  --today         Today’s nightly (requires credentials)
+  --yesterday     Yesterday’s nightly (requires credentials)
+  -l --local      Install a package from a local file
+  -u --upgrade    Upgrade an existing installation
+  -a --all        Remove all versions
+  --sjs           Evaluate Server-Side JavaScript
+  --xqy           Evaluate XQuery
+  -d --database   The database to evaluate against [default: Documents]
+  -v --verbose    More detailed information
+  --debug         Developer debugging information
+  
+"""
+
+import sys
+from docopt import docopt
+from mlvm.main import route_command
+
+if __name__ == '__main__':
+    arguments = docopt(__doc__, version='2.0.0')
+    
+    try:
+        route_command(arguments)
+    except Exception, err:
+        sys.stderr.write('ERROR: %s\n' % str(err))
+        sys.exit(1)

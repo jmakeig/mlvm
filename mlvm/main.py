@@ -1,44 +1,5 @@
-#!/usr/bin/env python
 # coding=utf-8
 
-"""MarkLogic Version Manager
-
-Usage:
-  mlvm list [--remote] [--verbose | --debug]
-  mlvm use <version> [--verbose | --debug]
-  mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
-  mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose | --debug]
-  mlvm remove [<version> | --all] [--verbose | --debug]
-  mlvm rename <version> <name> [--alias] [--verbose | --debug]
-  mlvm init [<host>] [--verbose | --debug]
-  mlvm start [--verbose | --debug]
-  mlvm stop [--verbose | --debug]
-  mlvm eval <input> [--sjs | --xqy] [--database <database>]
-  mlvm ps
-  
-Options:
-  -h --help       This screen
-  --remote        Include remote versions as well
-  --version       The version
-  -a --alias      A preferred name for the version
-  --today         Today’s nightly (requires credentials)
-  --yesterday     Yesterday’s nightly (requires credentials)
-  -l --local      Install a package from a local file
-  -u --upgrade    Upgrade an existing installation
-  -a --all        Remove all versions
-  --sjs           Evaluate Server-Side JavaScript
-  --xqy           Evaluate XQuery
-  -d --database   The database to evaluate against [default: Documents]
-  -v --verbose    More detailed information
-  --debug         Developer debugging information
-  
-Some other text:
-  Here is some more text
-
-
-"""
-
-from docopt import docopt
 import logging
 import os
 import platform
@@ -51,6 +12,7 @@ import requests
 from requests.auth import HTTPDigestAuth
 import datetime
 
+
 logger = logging.getLogger('mlvm')
 logger.setLevel(logging.DEBUG)
 #log = logging.FileHandler('mlvm.log')
@@ -59,18 +21,9 @@ log.setLevel(logging.DEBUG)
 log.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
 logger.addHandler(log)
 
-
-def get_release_artifact(major, minor, patch, system=platform.system()):
-    if 'Darwin' == system:
-      return 'MarkLogic-' + major + '.' + minor + '-' + patch + '-x86_64'
-    raise Exception('Not yet implemented')
-    
-def parse_artifact_from_file(file):
-    pattern = 'MarkLogic-(?:RHEL\d-)?\d{1,2}\.\d-(?:(?:\d{8})|(?:\d{1,2}\.\d{1,2}))[\.\-](?:x86_|amd)64'
-    match = re.findall(pattern, file)
-    if len(match) == 1:
-        return match[0]
-    raise Exception(artifact + ' does not match a MarkLogic version')
+################################################################################
+from versions import get_release_artifact, parse_artifact_from_file, parse_version, serialize_version
+################################################################################
 
 def promptCredentials(realm):
     """ Callback to prompt for username and password """
@@ -88,7 +41,7 @@ def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredent
         ROOT_URL = 'https://root.marklogic.com'
         # TODO: Platform-specific
         auth = onAuth(ROOT_URL)
-        url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch)
+        url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch) + '.dmg'
         logger.debug(url)
         return requests.get(url, auth=HTTPDigestAuth(auth.get('user'), auth.get('password')), stream=True).iter_content
     else:
@@ -154,50 +107,6 @@ def install_package(path, artifact, alias=None, system=platform.system()):
     else:
         raise Exception('Support for ' + system + ' is not yet implemented')
       
-
-def parse_version(version):
-    """ Parses a string, such as `'9.0-20160731'` or `'8.0-5.5'` into a 
-        dictionary with keys, `major`, `minor`, and `patch`. """
-        
-    # MarkLogic-RHEL6-9.0-20160801.x86_64.rpm
-    # MarkLogic-RHEL7-9.0-20160801.x86_64.rpm
-    # MarkLogic-9.0-20160801-x86_64.dmg
-    # MarkLogic-9.0-20160801-amd64.msi
-    # 
-    # MarkLogic-RHEL6-7.0-6.4.x86_64.rpm
-    # MarkLogic-RHEL7-7.0-6.4.x86_64.rpm
-    # MarkLogic-7.0-6.4-x86_64.dmg
-    # MarkLogic-7.0-6.4-amd64.msi
-    
-    version = str(version)
-    pattern = '(?:MarkLogic-(?:RHEL\d-)?)?(\d{1,2}\.\d-(?:(?:\d{8})|(?:\d{1,2}\.\d{1,2})))(?:[\.\-](?:x86_|amd)64)?'
-    match = re.findall(pattern, version)
-    if 1 != len(match):
-        raise Exception(version + ' doesn’t match a MarkLogic artifact')
-    mm_patch = match[0].split('-')
-    mm = mm_patch[0]
-    patch = None
-    if len(mm_patch) > 1:
-        patch = mm_patch[1]
-    mm_tokens = mm.split('.')
-    major = int(mm_tokens[0])
-    minor = None
-    if len(mm_tokens) > 1:
-        minor = int(mm_tokens[1])
-    return {'major': str(major), 'minor': str(minor), 'patch': patch}
-
-def serialize_version(version):
-    major = version.get('major')
-    minor = version.get('minor')
-    patch = version.get('patch')
-    
-    result = major
-    if minor is not None:
-        result = result + '.' + minor
-    if patch is not None:
-        result = result + '-' + patch
-    return result
-
 def ensure_directory(path):
     """ If a directory doesn’t exist at the path create it. """    
     if not os.path.isdir(path):
@@ -205,39 +114,9 @@ def ensure_directory(path):
       os.makedirs(path)
     return path
 
-if __name__ == '__main__':
-    arguments = docopt(__doc__, version='2.0.0')
-    #logger.debug(arguments)
-    # {'--alias': False,
-    #  '--all': False,
-    #  '--local': False,
-    #  '--nightly': False,
-    #  '--sjs': False,
-    #  '--upgrade': False,
-    #  '--verbose': False,
-    #  '--xqy': False,
-    #  '<host>': None,
-    #  '<input>': None,
-    #  '<name>': None,
-    #  '<package>': None,
-    #  '<version>': '9.0',
-    #  'eval': False,
-    #  'init': False,
-    #  'install': True,
-    #  'list': False,
-    #  'ps': False,
-    #  'remove': False,
-    #  'rename': False,
-    #  'start': False,
-    #  'stop': False,
-    #  'use': False}
-    HOME = os.getenv('MLVM_HOME', os.getenv('HOME') + '/.mlvm')
-    if HOME.startswith('~'):
-        raise Exception(HOME + ': Python doesn’t do shell expansion of paths.')
-    logger.debug('HOME ' + HOME)
-    SYSTEM = platform.system() # 'Darwin'
-    logger.debug('SYSTEM ' + SYSTEM)
-    
+from settings import HOME, SYSTEM
+
+def route_command(arguments):     
     ensure_directory(HOME)
 
     if arguments.get('install'):
@@ -282,7 +161,8 @@ if __name__ == '__main__':
 
         install_package(package, artifact, alias=alias)            
     elif arguments.get('use'):
-        raise Exception('use isn’t implemented yet')
+        from mlvm.commands.use import use
+        use()
         #         rm ~/Library/MarkLogic ~/Library/Application\ Support/MarkLogic ~/Library/PreferencePanes/MarkLogic.prefPane
         #         rm $SOURCE/versions/.current/MarkLogic $SOURCE/versions/.current/MarkLogic/StartupParameters.plist
         #         vdir=$(versiondir $1)
