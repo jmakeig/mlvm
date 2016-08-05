@@ -14,21 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
 import unittest
-
 from tap import TAPTestRunner
 
+
+class TestAnother(unittest.TestCase):
+        
+    def test_upper(self):
+        self.assertEqual('foo'.upper(), 'FOO')
+
 if __name__ == '__main__':
-    tests_dir = os.path.dirname(os.path.abspath(__file__))
-    loader = unittest.TestLoader()
-    tests = loader.discover(tests_dir)
-    runner = TAPTestRunner()
-    runner.set_stream(True)
-    #try:
-    runner.run(tests)
-    #except Exception, err:
-    #    sys.stderr.write('asdf\n')
-    #    sys.stderr.write('ERROR: %s\n' % str(err))
-    #    sys.exit(1)
+    unittest.main()
