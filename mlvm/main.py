@@ -45,16 +45,21 @@ def promptCredentials(realm):
     password = getpass.getpass('Password for ' + user + ' on ' + realm + ': ')
     return {'user': user, 'password': password}
 
+""" `True` to bypass the actual download for testing. 
+Assumes you’ve already got the artifact downloaded to the downloads folder. """
+DUMMY = False # Make sure not to check this in as True
+
 def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredentials):
-    #major = str(int(major)) # 8
-    #minor = str(int(minor)) # 0
-    #patch = str(patch) # 5.5 or 20160731
-        
+    
+    if DUMMY:
+        return 'DUMMY'
+
     if is_nightly:
         # https://root.marklogic.com/nightly/builds/macosx-64/osx-intel64-80-build.marklogic.com/b8_0/pkgs.20160731/MarkLogic-8.0-20160731-x86_64.dmg
         ROOT_URL = 'https://root.marklogic.com'
         # TODO: Platform-specific
         auth = onAuth(ROOT_URL)
+        # FIXME: Cross-platform
         url = ROOT_URL+ '/nightly/builds/macosx-64/osx-intel64-' + major + minor + '-build.marklogic.com/HEAD/pkgs.' + patch + '/' + get_release_artifact(major, minor, patch) + '.dmg'
         logger.debug(url)
         return requests.get(url, auth=HTTPDigestAuth(auth.get('user'), auth.get('password')), stream=True).iter_content
@@ -79,7 +84,11 @@ def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredent
 
 def download_file(itr, local_filename, total_size=None, onProgress=None):
     """ Given a response iterator, write chunks to a file. """
-    chunk_size=1024 * 5
+
+    if DUMMY:
+        return local_filename
+    
+    chunk_size = 1024 * 5
     running = 0
     with open(local_filename, 'wb') as f:
         for chunk in itr(chunk_size=chunk_size): 
@@ -94,11 +103,13 @@ def show_progress(amt, total, stream=None):
     logger.debug(str(amt) + ' of ' + str(total))
 
 def install_package(path, artifact, alias=None, system=platform.system()):
-    logger.info('Installing ' + alias + ' from ' + path + ' with artifact ' + artifact)
     if alias is None:
         alias = artifact
     if not os.path.isfile(path):
         raise Exception(path + ' does not exist')
+    
+    logger.info('Installing %s from %s with artifact %s', alias, path, artifact)
+    
     if 'Darwin' == system:
         try:
             from gmacpyutil import macdisk
@@ -149,6 +160,8 @@ def route_command(arguments):
                 today = datetime.date.today()
                 nightly = today.strftime('%Y%m%d')
                 artifact = get_release_artifact(version.get('major'), version.get('minor'), nightly)
+                alias = serialize_version(parse_version(artifact))
+                # FIXME: Cross-platform
                 dest = ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
                 package = download_file(
                     get_download_itr(
@@ -162,6 +175,7 @@ def route_command(arguments):
                 )
             else:
                 artifact = get_release_artifact(version.get('major'), version.get('minor'), version.get('patch'))
+                # FIXME: Cross-platform
                 dest = ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
                 package = download_file(
                     get_download_itr(
@@ -172,7 +186,6 @@ def route_command(arguments):
                     local_filename = dest,
                     onProgress=show_progress
                 )
-
         install_package(package, artifact, alias=alias)            
     elif arguments.get('use'):
         from mlvm.commands.use import use
