@@ -4,7 +4,8 @@
   "description": "MarkLogic Version Manager",
   "main": "bin/mlvm",
   "scripts": {
-    "test": "python mlvm/test/runner.py | tap-notify | tap-diff"
+    "test": "python mlvm/test/runner.py | tap-notify | tap-diff",
+    "test-naked": "python mlvm/test/runner.py"
   },
   "repository": {
     "type": "git",
