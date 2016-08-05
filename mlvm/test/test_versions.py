@@ -25,6 +25,10 @@ class TestVersions(unittest.TestCase):
 
     def test_parse_version(self):
         self.assertEqual(
+            parse_version('9.0'), 
+            {'major': '9', 'minor': '0', 'patch': None}
+        )
+        self.assertEqual(
             parse_version('9.0-1'), 
             {'major': '9', 'minor': '0', 'patch': '1'}
         )
