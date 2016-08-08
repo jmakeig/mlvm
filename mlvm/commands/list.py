@@ -14,13 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import os
-import platform
+import logging
 
-USER = os.path.expanduser('~')
+from mlvm.settings import HOME, SYSTEM
 
-HOME = os.getenv('MLVM_HOME', USER + '/.mlvm')
-if HOME.startswith('~'):
-    raise Exception(HOME + ': Python doesn’t do shell expansion of paths.')
+logger = logging.getLogger('mlvm')
 
-SYSTEM = platform.system() # 'Darwin'
+def list(writer):
+   for name in os.listdir('/Users/jmakeig/.mlvm/versions'):
+       writer.write(name + '\n') 
+
+def get_versions(path):
+    return ''
+
+# TODO: Figure out which one is current

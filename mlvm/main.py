@@ -15,12 +15,11 @@
 # limitations under the License.
 
 import logging
+import sys
 import os
 import platform
 import subprocess
 import getpass
-#import tempfile
-#import uuid
 import re
 import requests
 from requests.auth import HTTPDigestAuth
@@ -47,7 +46,7 @@ def promptCredentials(realm):
 
 """ `True` to bypass the actual download for testing. 
 Assumes you’ve already got the artifact downloaded to the downloads folder. """
-DUMMY = False # Make sure not to check this in as True
+DUMMY = True # Make sure not to check this in as True
 
 def get_download_itr(major, minor, patch, is_nightly=False, onAuth=promptCredentials):
     
@@ -125,7 +124,7 @@ def install_package(path, artifact, alias=None, system=platform.system()):
             if 0 != result[2]:
                 raise Exception(result[1])
             ensure_directory(HOME + '/versions/' + alias + '/Support/Data')
-            os.chmod(HOME + '/versions/' + alias + '/StartupItems/MarkLogic/MarkLogic', 0775) # TODO: +x, not hard-coded
+            os.chmod(HOME + '/versions/' + alias + '/StartupItems/MarkLogic/MarkLogic', 0755) # TODO: +x, not hard-coded
         finally:
             logger.debug('Detaching disk image')
             img.Detach(force=True)
@@ -187,15 +186,13 @@ def route_command(arguments):
                     onProgress=show_progress
                 )
         install_package(package, artifact, alias=alias)            
+    elif arguments.get('prepare'):
+        from mlvm.commands.prepare import prepare
+        prepare()
     elif arguments.get('use'):
         from mlvm.commands.use import use
-        use()
-        #         rm ~/Library/MarkLogic ~/Library/Application\ Support/MarkLogic ~/Library/PreferencePanes/MarkLogic.prefPane
-        #         rm $SOURCE/versions/.current/MarkLogic $SOURCE/versions/.current/MarkLogic/StartupParameters.plist
-        #         vdir=$(versiondir $1)
-        #         ln -s $vdir/MarkLogic ~/Library/MarkLogic
-        #         ln -s $vdir/Support ~/Library/Application\ Support/MarkLogic
-        #         ln -s $vdir/PreferencePanes/MarkLogic.prefPane ~/Library/PreferencePanes/MarkLogic.prefPane
-        #         # current version links for startup commands
-        #         ln -s $vdir/StartupItems/MarkLogic/MarkLogic $SOURCE/versions/.current/MarkLogic
-        #         ln -s $vdir/StartupItems/MarkLogic/StartupParameters.plist $SOURCE/versions/.current/StartupParameters.plist    
+        use(arguments.get('<version>'))
+    elif arguments.get('list'):
+        from mlvm.commands.list import list
+        list(sys.stdout)
+        

@@ -20,6 +20,7 @@
 Usage:
   mlvm list [--remote] [--verbose | --debug]
   mlvm use <version> [--verbose | --debug]
+  mlvm prepare [--verbose | --debug]
   mlvm install <version> [--alias <name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
   mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose | --debug]
   mlvm remove [<version> | --all] [--verbose | --debug]
@@ -45,18 +46,30 @@ Options:
   -d --database   The database to evaluate against [default: Documents]
   -v --verbose    More detailed information
   --debug         Developer debugging information
-  
+
+You must use run prepare as root, for example using sudo
+
 """
 
+# TODO: Parse arguments into command-specific data structures, decoupled from actual command-line interface
+# install (remote): { 'version': None, 'alias': None, 'nightly': None, 'upgrade': False }
+# install (local) : { 'local': None, 'alias': None, 'upgrade': false }
+
 import sys
+import traceback
 from docopt import docopt
 from mlvm.main import route_command
 
+DEBUG = True # TODO: Link this to `--debug` option
+
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='2.0.0')
-    
     try:
+        arguments = docopt(__doc__, version='2.0.0')
         route_command(arguments)
     except Exception, err:
-        sys.stderr.write('ERROR: %s\n' % str(err))
-        sys.exit(1)
+        exc_info = sys.exc_info()
+        if DEBUG: 
+            traceback.print_exception(*exc_info, limit = None, file = sys.stderr)
+            del exc_info
+        if not DEBUG:
+            sys.exit(1) # TODO: Better Exceptions and return code
