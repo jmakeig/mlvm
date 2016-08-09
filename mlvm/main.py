@@ -26,6 +26,9 @@ logger.addHandler(log)
 
 from settings import HOME, SYSTEM
 
+# TODO: Add error handling to make sure `prepare` has been called for 
+#       all of the commands that need it
+
 def route_command(arguments):
     if arguments.get('install'):
         from mlvm.commands.install import install  

@@ -32,6 +32,7 @@ logger = logging.getLogger('mlvm')
 
 def _run(go):
     if('Darwin' == SYSTEM):
+        # FIXME: What if there is no versions/.current?
         cmd = [HOME + '/versions/.current/StartupItems/MarkLogic/MarkLogic', go] 
         result = RunProcess(cmd)
         # if 0 != result[2]:
