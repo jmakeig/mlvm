@@ -52,8 +52,14 @@ def update_default_hostname(new_name, host='127.0.0.1', port=8002, protocol='htt
         response.raise_for_status()
     except HTTPError, err:
         raise err # What to do here?
-    
-    return response.json()
 
-def init():
-    logger.debug(update_default_hostname('localhost'))
+def bootstrap_init(host):
+    pass
+
+def init(host, new_name):
+    if host is None:
+        host = '127.0.0.1'
+    bootstrap_init(host)
+
+    if new_name is not None:
+        update_default_hostname(new_name, host=host)

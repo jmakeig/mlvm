@@ -55,5 +55,5 @@ def route_command(arguments):
         ps()
     elif arguments.get('init'):
         from mlvm.commands.init import init
-        init()
+        init(arguments.get('--host'), arguments.get('--rename'))
         
