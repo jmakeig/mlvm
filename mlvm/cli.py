@@ -14,3 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import getpass
+
+logger = logging.getLogger('mlvm')
+
+def promptCredentials(realm):
+    """ Callback to prompt for username and password """
+    user = raw_input('Username for ' + realm + ': ') # TODO: Validation
+    password = getpass.getpass('Password for ' + user + ' on ' + realm + ': ')
+    return {'user': user, 'password': password}
+
+def show_progress(amt, total, stream = None):
+    logger.debug(str(amt) + ' of ' + str(total))

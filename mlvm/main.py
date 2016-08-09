@@ -39,4 +39,13 @@ def route_command(arguments):
     elif arguments.get('list'):
         from mlvm.commands.list import list
         list(sys.stdout)
+    elif arguments.get('start'):
+        from mlvm.commands.run import start
+        start()
+    elif arguments.get('stop'):
+        from mlvm.commands.run import stop
+        stop()
+    elif arguments.get('ps'):
+        from mlvm.commands.run import ps
+        ps()
         
