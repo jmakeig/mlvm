@@ -24,6 +24,8 @@ log.setLevel(logging.DEBUG)
 log.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
 logger.addHandler(log)
 
+
+
 from settings import HOME, SYSTEM
 
 # TODO: Add error handling to make sure `prepare` has been called for 
@@ -51,4 +53,7 @@ def route_command(arguments):
     elif arguments.get('ps'):
         from mlvm.commands.run import ps
         ps()
+    elif arguments.get('init'):
+        from mlvm.commands.init import init
+        init()
         
