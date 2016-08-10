@@ -16,16 +16,20 @@
 
 import sys
 import os
+import time
 import logging
-
-from mlvm.settings import HOME, SYSTEM
-
-logger = logging.getLogger('mlvm')
 
 import json
 import requests
 from requests.auth import HTTPDigestAuth
 from requests.exceptions import HTTPError
+
+from mlvm.settings import HOME, SYSTEM
+from mlvm.cli import promptCredentials
+
+logger = logging.getLogger('mlvm')
+
+credentials = None
 
 def get_default_host_id(**kwargs):
     url = '{protocol}://{host}:{port}/manage/v2/hosts?group-id=Default'.format(**kwargs)
@@ -41,7 +45,7 @@ def get_default_host_id(**kwargs):
     return host_id
 
 def update_default_hostname(new_name, host='127.0.0.1', port=8002, protocol='http'):
-    auth = HTTPDigestAuth('admin', 'admin')
+    auth = HTTPDigestAuth(credentials.get('user'), 'admin')
     headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     host_id = get_default_host_id(protocol=protocol, host=host, port=port, auth=auth)
     url = '{protocol}://{host}:{port}/manage/v2/hosts/{host_id}/properties'.format(protocol=protocol, host=host, port=port, host_id=host_id)

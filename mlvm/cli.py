@@ -19,10 +19,15 @@ import getpass
 
 logger = logging.getLogger('mlvm')
 
-def promptCredentials(realm):
+def promptCredentials(realm, verify=False):
     """ Callback to prompt for username and password """
     user = raw_input('Username for ' + realm + ': ') # TODO: Validation
     password = getpass.getpass('Password for ' + user + ' on ' + realm + ': ')
+    if verify:
+        password2 = getpass.getpass('Verify password: ')
+        if password2 != password:
+            raise Exception('The passwords do not match')
+
     return {'user': user, 'password': password}
 
 def show_progress(amt, total, stream = None):
