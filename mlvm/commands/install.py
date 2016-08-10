@@ -91,18 +91,12 @@ def install_package(path, artifact, alias=None, system = SYSTEM):
     
     if 'Darwin' == system:
         try:
-            with open(os.devnull, 'w') as devnull:
-                _ = sys.stderr; sys.stderr = devnull
-                from gmacpyutil import macdisk
-                sys.stderr = _
+            from gmacpyutil import macdisk
             
             img = macdisk.Image(path)
             disk = img.Attach()
             
-            with open(os.devnull, 'w') as devnull:
-                _ = sys.stderr; sys.stderr = devnull
-                from gmacpyutil import RunProcess # returns (stdout, stderr, returncode)
-                sys.stderr = _
+            from gmacpyutil import RunProcess # returns (stdout, stderr, returncode)
 
             # pax.gz doesn’t seem to be properly supported by Python’s tar library
             cmd = ['tar', 'xfz', '/Volumes/MarkLogic/' + artifact + '.pkg/Contents/Archive.pax.gz', 
