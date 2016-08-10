@@ -58,7 +58,30 @@ def update_default_hostname(new_name, host='127.0.0.1', port=8002, protocol='htt
         raise err # What to do here?
 
 def bootstrap_init(host):
-    pass
+    logger.info('Enter the username and password for the admin user')
+    credentials = promptCredentials(host, verify=True)
+
+    #http://"$HOST":8001/admin/v1/timestamp
+    url = 'http://{host}:8001/admin/v1/init'.format(host=host)
+    headers = { 'Content-Type': 'application/x-www-form-urlencoded'}
+    logger.info('Initializing %s', host)
+    try:
+        response = requests.post(url, data='', headers=headers)
+        response.raise_for_status()
+    except HTTPError, err:
+        raise err # What to do here?
+
+    logger.debug('Sleeping…')
+    time.sleep(3)
+
+    data = {'admin-username': credentials.get('user'), 'admin-password': credentials.get('password'), 'realm': 'public' }
+    headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
+    url = 'http://{host}:8001/admin/v1/instance-admin'.format(host=host)
+    try:
+        response = requests.post(url, data=data, headers=headers)
+        response.raise_for_status()
+    except HTTPError, err:
+        raise err # What to do here?  
 
 def init(host, new_name):
     if host is None:
