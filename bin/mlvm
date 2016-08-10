@@ -22,7 +22,7 @@ Usage:
   mlvm use <version> [--verbose | --debug]
   mlvm prepare [--verbose | --debug]
   mlvm install <version> [--alias=<name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
-  mlvm install --local <package> [--alias <name>] [--upgrade] [--verbose | --debug]
+  mlvm install --local=<package> [--alias <name>] [--upgrade] [--verbose | --debug]
   mlvm remove [<version> | --all] [--verbose | --debug]
   mlvm rename <version> <name> [--alias=<name>] [--verbose | --debug]
   mlvm init [--host=<name>] [--rename=<name>] [--verbose | --debug]
@@ -38,7 +38,7 @@ Options:
   -a --alias=<name>       A preferred name for the version
   --today                 Today’s nightly (requires credentials)
   --yesterday             Yesterday’s nightly (requires credentials)
-  -l --local              Install a package from a local file
+  -l --local=<package>    Install a package from a local file
   -u --upgrade            Upgrade an existing installation
   -a --all                Remove all versions
   --host=<name>           The hostname of the bootstrap server to init [default: 127.0.0.1]
@@ -67,7 +67,6 @@ DEBUG = True # TODO: Link this to `--debug` option
 if __name__ == '__main__':
     try:
         arguments = docopt(__doc__, version='2.0.0')
-        print(arguments)
         route_command(arguments)
     except Exception, err:
         exc_info = sys.exc_info()

@@ -116,46 +116,45 @@ def install_package(path, artifact, alias=None, system = SYSTEM):
 def install(arguments):
     fs.ensure_directory(HOME)
 
-    if arguments.get('install'):
-        package = arguments.get('<package>')
-        artifact = None
-        alias = arguments.get('<name>')
-        if arguments.get('--local'):
-            artifact = versions.parse_artifact_from_file(package)
-            if alias is None:
-                alias = versions.serialize_version(versions.parse_version(artifact))
+    package = arguments.get('--local')
+    artifact = None
+    alias = arguments.get('<name>')
+    if arguments.get('--local'):
+        artifact = versions.parse_artifact_from_file(package)
+        if alias is None:
+            alias = versions.serialize_version(versions.parse_version(artifact))
+    else:
+        version = versions.parse_version(arguments.get('<version>'))
+        if arguments.get('--today'):
+            if version.get('patch') is not None:
+                raise Exception('You must not specify a patch release with the --today option')
+            today = datetime.date.today()
+            nightly = today.strftime('%Y%m%d')
+            artifact = versions.get_release_artifact(version.get('major'), version.get('minor'), nightly)
+            alias = versions.serialize_version(versions.parse_version(artifact))
+            # FIXME: Cross-platform
+            dest = fs.ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
+            package = download_file(
+                get_download_itr(
+                    version.get('major'), 
+                    version.get('minor'), 
+                    nightly, 
+                    is_nightly=True
+                ), 
+                local_filename = dest, 
+                onProgress=cli.show_progress
+            )
         else:
-            version = versions.parse_version(arguments.get('<version>'))
-            if arguments.get('--today'):
-                if version.get('patch') is not None:
-                  raise Exception('You must not specify a patch release with the --today option')
-                today = datetime.date.today()
-                nightly = today.strftime('%Y%m%d')
-                artifact = versions.get_release_artifact(version.get('major'), version.get('minor'), nightly)
-                alias = versions.serialize_version(versions.parse_version(artifact))
-                # FIXME: Cross-platform
-                dest = fs.ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
-                package = download_file(
-                    get_download_itr(
-                        version.get('major'), 
-                        version.get('minor'), 
-                        nightly, 
-                        is_nightly=True
-                    ), 
-                    local_filename = dest, 
-                    onProgress=cli.show_progress
-                )
-            else:
-                artifact = versions.get_release_artifact(version.get('major'), version.get('minor'), version.get('patch'))
-                # FIXME: Cross-platform
-                dest = fs.ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
-                package = download_file(
-                    get_download_itr(
-                        version.get('major'),
-                        version.get('minor'),
-                        version.get('patch')
-                    ),
-                    local_filename = dest,
-                    onProgress=show_progress
-                )
-        install_package(package, artifact, alias=alias)   
+            artifact = versions.get_release_artifact(version.get('major'), version.get('minor'), version.get('patch'))
+            # FIXME: Cross-platform
+            dest = fs.ensure_directory(HOME + '/downloads') + '/' + artifact + '.dmg'
+            package = download_file(
+                get_download_itr(
+                    version.get('major'),
+                    version.get('minor'),
+                    version.get('patch')
+                ),
+                local_filename = dest,
+                onProgress=show_progress
+            )
+    install_package(package, artifact, alias=alias)   
