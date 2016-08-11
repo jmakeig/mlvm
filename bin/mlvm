@@ -21,7 +21,7 @@ Usage:
   mlvm list [--remote] [--verbose | --debug]
   mlvm use <version> [--verbose | --debug]
   mlvm prepare [--verbose | --debug]
-  mlvm install <version> [--alias=<name>] [--today | --yesterday] [--upgrade] [--verbose | --debug]
+  mlvm install <version> [--alias=<name>] [--nightly] [--upgrade] [--verbose | --debug]
   mlvm install --local=<package> [--alias <name>] [--upgrade] [--verbose | --debug]
   mlvm remove [<version> | --all] [--verbose | --debug]
   mlvm rename <version> <name> [--alias=<name>] [--verbose | --debug]
