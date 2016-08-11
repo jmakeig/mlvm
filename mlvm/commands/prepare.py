@@ -17,11 +17,13 @@
 
 import os
 import logging
+logger = logging.getLogger('mlvm')
 
 from mlvm.settings import HOME, SYSTEM, USER
 import mlvm.filesystem as fs
 
-logger = logging.getLogger('mlvm')
+from mlvm.exceptions import RootUserRequired, UnsupportedPlatform
+
 
 # PATHS = {
 #     'Darwin': {
@@ -36,18 +38,23 @@ def is_prepared():
     if 'Darwin' == SYSTEM:
         return True # TODO
     else:
-        raise Exception('%s is not a supported platform', SYSTEM)
+        raise UnsupportedPlatform('%s is not a supported platform', SYSTEM)
+
+def ensure_sudo():
+    try:
+        real_user = os.environ['SUDO_USER']
+    except Exception, err:
+        raise RootUserRequired()
+    
+    import pwd
+    return (
+        pwd.getpwnam(real_user).pw_uid,
+        pwd.getpwnam(real_user).pw_gid
+    )
 
 def prepare():
     if 'Darwin' == SYSTEM:
-        try:
-            real_user = os.environ['SUDO_USER']
-        except Exception, err:
-            raise err
-        
-        import pwd
-        real_user_id = pwd.getpwnam(real_user).pw_uid
-        real_group_id = pwd.getpwnam(real_user).pw_gid
+        real_user_id, real_group_id = ensure_sudo()
 
         # TODO: Extract me into a proper data structure
         LIBRARY = USER + '/Library'
@@ -56,6 +63,7 @@ def prepare():
         STARTUP = LIBRARY + '/StartupItems'
 
         current_dir = fs.ensure_directory(HOME + '/versions/.current')
+        os.lchown(current_dir, real_user_id, real_group_id)
         fs.clear_links(current_dir)
 
         # MarkLogic Server
@@ -71,3 +79,34 @@ def prepare():
         fs.symlink_force(current_dir + '/StartupItems/MarkLogic', STARTUP + '/MarkLogic')
     else:
         raise Exception('%s is not a supported platform', SYSTEM)
+
+def _unlink(path):
+    if(os.path.islink(path)):
+        os.unlink(path)
+
+def remove():
+    if 'Darwin' == SYSTEM:
+        real_user_id, real_group_id = ensure_sudo()
+
+        # TODO: Extract me into a proper data structure
+        LIBRARY = USER + '/Library'
+        APPLICATION_SUPPORT = LIBRARY + '/Application Support'
+        PREF_PANES = LIBRARY + '/PreferencePanes'
+        STARTUP = LIBRARY + '/StartupItems'
+
+        logger.debug('Unlinking {0}'.format(LIBRARY + '/MarkLogic'))
+        _unlink(LIBRARY + '/MarkLogic')
+        logger.debug('Unlinking {0}'.format(APPLICATION_SUPPORT + '/MarkLogic'))
+        _unlink(APPLICATION_SUPPORT + '/MarkLogic')
+        logger.debug('Unlinking {0}'.format(PREF_PANES + '/MarkLogic.prefPane'))
+        _unlink(PREF_PANES + '/MarkLogic.prefPane')
+        logger.debug('Unlinking {0}'.format(STARTUP + '/MarkLogic'))
+        _unlink(STARTUP + '/MarkLogic')
+
+        current_dir = HOME + '/versions/.current'
+        if os.path.isdir(current_dir):
+            logger.debug('Clearing {0}'.format(current_dir))
+            fs.clear_links(current_dir)
+
+    else:
+        raise UnsupportedPlatform('%s is not a supported platform', SYSTEM)

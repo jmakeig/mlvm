@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import logging
 
 logger = logging.getLogger('mlvm')
@@ -56,4 +57,7 @@ def route_command(arguments):
     elif arguments.get('init'):
         from mlvm.commands.init import init
         init(arguments.get('--host'), arguments.get('--rename'))
+    elif arguments.get('remove'):
+        from mlvm.commands.prepare import remove
+        remove()
         
