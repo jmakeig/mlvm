@@ -41,9 +41,11 @@ def _run(go):
         raise Exception('%s is not a supported platform', SYSTEM)
 
 def start():
+    # TODO: Is this idempotent?
     return _run('start')
 
 def stop():
+    # TODO: Is this idempotent?
     return _run('stop')
 
 def ps():
