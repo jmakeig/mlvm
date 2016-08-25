@@ -60,4 +60,7 @@ def route_command(arguments):
     elif arguments.get('remove'):
         from mlvm.commands.prepare import remove
         remove()
-        
+    elif arguments.get('eval'):
+        from mlvm.commands.eval import remote_eval
+        remote_eval('Sequence.from(["asdf", xdmp.version(), 42, true]);')
+
