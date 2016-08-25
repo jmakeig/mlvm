@@ -29,11 +29,12 @@ from mlvm.cli import promptCredentials
 
 logger = logging.getLogger('mlvm')
 
-credentials = None
+credentials = { 'auth': None } # Module-scoped variables aren't writable. Their properties are, though. (Huh?)
 
 def get_default_host_id(**kwargs):
     url = '{protocol}://{host}:{port}/manage/v2/hosts?group-id=Default'.format(**kwargs)
     headers = { 'Accept': 'application/json' }
+
     try:
         response = requests.get(url, headers=headers, auth=kwargs.get('auth'))
         response.raise_for_status()
@@ -45,7 +46,8 @@ def get_default_host_id(**kwargs):
     return host_id
 
 def update_default_hostname(new_name, host='127.0.0.1', port=8002, protocol='http'):
-    auth = HTTPDigestAuth(credentials.get('user'), 'admin')
+    logger.info('Updating hostname')
+    auth = HTTPDigestAuth(credentials['auth']['user'], credentials['auth']['password'])
     headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     host_id = get_default_host_id(protocol=protocol, host=host, port=port, auth=auth)
     url = '{protocol}://{host}:{port}/manage/v2/hosts/{host_id}/properties'.format(protocol=protocol, host=host, port=port, host_id=host_id)
@@ -57,9 +59,14 @@ def update_default_hostname(new_name, host='127.0.0.1', port=8002, protocol='htt
     except HTTPError, err:
         raise err # What to do here?
 
+def wait_for_restart(host):
+    # TODO: Wait for server restart
+    logger.debug('Sleeping…')
+    time.sleep(10)
+
 def bootstrap_init(host):
     logger.info('Enter the username and password for the admin user')
-    credentials = promptCredentials(host, verify=True)
+    credentials['auth'] = promptCredentials(host, verify=True)
 
     #http://"$HOST":8001/admin/v1/timestamp
     url = 'http://{host}:8001/admin/v1/init'.format(host=host)
@@ -71,10 +78,9 @@ def bootstrap_init(host):
     except HTTPError, err:
         raise err # What to do here?
 
-    logger.debug('Sleeping…')
-    time.sleep(3)
+    wait_for_restart(host)
 
-    data = {'admin-username': credentials.get('user'), 'admin-password': credentials.get('password'), 'realm': 'public' }
+    data = {'admin-username': credentials['auth']['user'], 'admin-password': credentials['auth']['password'], 'realm': 'public' }
     headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
     url = 'http://{host}:8001/admin/v1/instance-admin'.format(host=host)
     try:
@@ -88,5 +94,6 @@ def init(host, new_name):
         host = '127.0.0.1'
     bootstrap_init(host)
 
+    wait_for_restart(host)
     if new_name is not None:
         update_default_hostname(new_name, host=host)
