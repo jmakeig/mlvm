@@ -1,7 +1,6 @@
 arrow==0.4.6
-docopt==0.6.2
-gmacpyutil==0.1
--e git+https://github.com/withjam/mlvm.git@69f764255d94bf376c1132ce6f50c2b81f2d3068#egg=mlvm
+docopt==0.6.2 
+-e git://github.com/google/macops.git#egg=gmacpyutil&subdirectory=gmacpyutil
 python-dateutil==2.5.3
 PyYAML==3.11
 requests==2.10.0

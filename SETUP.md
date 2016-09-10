@@ -1,4 +1,4 @@
-* `virtaulenv env` to create a new virtualenv called “env”
+* `virtualenv env` to create a new virtualenv called “env”
 * `source env/bin/activate` to set virtualenv
 * `pip install -r requirements.txt` to install dependencies
 * `python setup.py develop`
